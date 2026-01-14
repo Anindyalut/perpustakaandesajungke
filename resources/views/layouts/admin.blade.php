@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <title>@yield('title', 'Admin') | Admin Perpustakaan</title>
 
     {{-- Bootstrap --}}
@@ -21,6 +20,7 @@
         body {
             background: #f8f9fa;
             overflow-x: hidden;
+            transition: margin-left .3s ease;
         }
 
         /* ================= SIDEBAR ================= */
@@ -32,11 +32,18 @@
             top: 0;
             left: 0;
             transition: transform .3s ease;
-            z-index: 1000;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .sidebar h4 {
             font-size: 18px;
+            text-align: center;
+            padding: 1.5rem 0;
+            font-weight: bold;
+            color: #fff;
         }
 
         .sidebar a {
@@ -55,11 +62,28 @@
             background: var(--hijau-hover);
         }
 
+        .logout-btn {
+            background: #e05656;
+            border: none;
+            color: white;
+            padding: 10px;
+            width: 80%;
+            border-radius: 8px;
+            margin: 20px auto;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c94b4b;
+        }
+
         /* ================= CONTENT ================= */
         .content {
             margin-left: 260px;
             padding: 30px;
             transition: margin-left .3s ease;
+            max-width: 100%;
+            overflow-x: auto;
         }
 
         /* ================= TOGGLE BUTTON ================= */
@@ -83,27 +107,23 @@
             font-size: 18px;
         }
 
-        /* ================= COLLAPSED ================= */
-        .sidebar-collapsed .sidebar {
-            transform: translateX(-100%);
-        }
-
-        .sidebar-collapsed .content {
-            margin-left: 0;
-        }
-
-        .sidebar-collapsed .sidebar-toggle {
+        /* ================= MOBILE OVERLAY ================= */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 1040;
         }
 
-        .sidebar-collapsed .sidebar-toggle i {
-            transform: rotate(180deg);
-        }
-
-        /* ================= MOBILE ================= */
         @media (max-width: 768px) {
             .sidebar {
+                width: 240px;
                 transform: translateX(-100%);
+                box-shadow: 2px 0 8px rgba(0,0,0,0.2);
             }
 
             .content {
@@ -112,28 +132,41 @@
             }
 
             .sidebar-toggle {
-                left: 0;
+                left: 10px;
+                top: 10px;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                font-size: 20px;
+                padding: 0;
             }
 
-            body:not(.sidebar-collapsed) .sidebar {
+            .sidebar-open .sidebar {
                 transform: translateX(0);
             }
+
+            .sidebar-open .sidebar-overlay {
+                display: block;
+            }
         }
 
-        /* ================= LOGOUT ================= */
-        .logout-btn {
-            background: #e05656;
-            border: none;
-            color: white;
-            padding: 10px;
-            width: 80%;
-            border-radius: 8px;
-            margin: 20px auto;
-            font-size: 14px;
-        }
+        /* ================= DESKTOP COLLAPSE ================= */
+        @media (min-width: 769px) {
+            .sidebar-collapsed .sidebar {
+                transform: translateX(-100%);
+            }
 
-        .logout-btn:hover {
-            background: #c94b4b;
+            .sidebar-collapsed .content {
+                margin-left: 0;
+            }
+
+            .sidebar-collapsed .sidebar-toggle {
+                left: 10px;
+            }
+
+            .sidebar-collapsed .sidebar-toggle i {
+                transform: rotate(180deg);
+            }
         }
     </style>
 
@@ -141,42 +174,37 @@
 </head>
 <body>
 
+{{-- MOBILE OVERLAY --}}
+<div class="sidebar-overlay"></div>
+
 {{-- TOGGLE --}}
 <button id="toggleSidebar" class="sidebar-toggle">
-    <i class="bi bi-chevron-left"></i>
+    <i class="bi bi-list"></i>
 </button>
 
 {{-- SIDEBAR --}}
 <div class="sidebar d-flex flex-column justify-content-between">
     <div>
-        <h4 class="text-center text-white py-4 fw-bold">
-            ADMIN<br>PERPUSTAKAAN
-        </h4>
+        <h4 class="fw-bold">ADMIN<br>PERPUSTAKAAN</h4>
 
         <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
-
         <a href="{{ route('admin.books.index') }}" class="{{ request()->routeIs('admin.books.*') ? 'active' : '' }}">
             <i class="bi bi-book"></i> Kelola Buku
         </a>
-
         <a href="{{ route('admin.members.index') }}" class="{{ request()->routeIs('admin.members.*') ? 'active' : '' }}">
             <i class="bi bi-people"></i> Kelola Member
         </a>
-
         <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
             <i class="bi bi-arrow-left-right"></i> Transaksi
         </a>
-
         <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
             <i class="bi bi-file-earmark-text"></i> Laporan
         </a>
-
         <a href="{{ route('admin.fpgrowth.parameter') }}" class="{{ request()->routeIs('admin.fpgrowth.parameter') ? 'active' : '' }}">
             <i class="bi bi-sliders"></i> Parameter Rekomendasi
         </a>
-
         <a href="{{ route('admin.fpgrowth.index') }}" class="{{ request()->routeIs('admin.fpgrowth.index') ? 'active' : '' }}">
             <i class="bi bi-stars"></i> Rekomendasi Buku
         </a>
@@ -195,20 +223,52 @@
 
 <script>
     const toggleBtn = document.getElementById('toggleSidebar');
+    const body = document.body;
+    const overlay = document.querySelector('.sidebar-overlay');
 
-    if (localStorage.getItem('sidebar') === 'collapsed') {
-        document.body.classList.add('sidebar-collapsed');
+    function isMobile() {
+        return window.innerWidth <= 768;
     }
 
+    // Toggle sidebar
     toggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-collapsed');
+        if(isMobile()){
+            body.classList.toggle('sidebar-open'); // overlay mobile
+        } else {
+            body.classList.toggle('sidebar-collapsed'); // desktop push
+            localStorage.setItem(
+                'sidebar',
+                body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'open'
+            );
+        }
+    });
 
-        localStorage.setItem(
-            'sidebar',
-            document.body.classList.contains('sidebar-collapsed')
-                ? 'collapsed'
-                : 'open'
-        );
+    // Click overlay to close sidebar (mobile)
+    overlay.addEventListener('click', () => {
+        if(isMobile()) body.classList.remove('sidebar-open');
+    });
+
+    // Close sidebar when link clicked
+    document.querySelectorAll('.sidebar a').forEach(link => {
+        link.addEventListener('click', () => {
+            if(isMobile()){
+                body.classList.remove('sidebar-open');
+            }
+        });
+    });
+
+    // Load sidebar state desktop
+    if(localStorage.getItem('sidebar') === 'collapsed'){
+        body.classList.add('sidebar-collapsed');
+    }
+
+    // Resize listener
+    window.addEventListener('resize', () => {
+        if(isMobile()){
+            body.classList.remove('sidebar-collapsed'); // desktop collapse di-reset
+        } else {
+            body.classList.remove('sidebar-open'); // overlay mobile ditutup
+        }
     });
 </script>
 
