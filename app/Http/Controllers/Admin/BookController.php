@@ -81,17 +81,19 @@ class BookController extends Controller
             'color'     => 'required',
             'stock'     => 'required|numeric|min:0',
             'price'     => 'required|numeric|min:0',
-            'image'     => 'nullable|image|max:2048',
+            'image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         $data = $request->except('image');
 
-        // kalau upload gambar baru
         if ($request->hasFile('image')) {
-            if ($book->image && file_exists(storage_path('app/public/'.$book->image))) {
-                unlink(storage_path('app/public/'.$book->image));
+
+            // HAPUS GAMBAR LAMA (AMAN)
+            if ($book->image && Storage::disk('public')->exists($book->image)) {
+                Storage::disk('public')->delete($book->image);
             }
 
+            // SIMPAN GAMBAR BARU
             $data['image'] = $request->file('image')->store('covers', 'public');
         }
 
