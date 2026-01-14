@@ -46,7 +46,7 @@ class Transaction extends Model
             return $this->max_return_date;
         }
 
-        return $this->borrow_date ? $this->borrow_date->copy()->addDays(2) : null;
+        return $this->borrow_date ? $this->borrow_date->copy()->addDays(3) : null;
     }
 
     // ACCESSOR: denda real-time
