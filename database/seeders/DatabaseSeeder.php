@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         // Panggil seeder admin
         $this->call([
             AdminSeeder::class,
+            BookSeeder::class,
         ]);
 
         // OPTIONAL: jika mau user dummy

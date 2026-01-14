@@ -2,13 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>@yield('title', 'Admin') | Admin Perpustakaan</title>
 
     {{-- Bootstrap --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
-    {{-- STYLE UTAMA ADMIN (HIJAU MEMBER) --}}
     <style>
         :root {
             --hijau-utama: #0f5c55;
@@ -30,7 +31,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            transition: all .3s ease;
+            transition: transform .3s ease;
             z-index: 1000;
         }
 
@@ -58,16 +59,7 @@
         .content {
             margin-left: 260px;
             padding: 30px;
-            transition: all .3s ease;
-        }
-
-        /* ================= SIDEBAR COLLAPSED ================= */
-        .sidebar-collapsed .sidebar {
-            transform: translateX(-100%);
-        }
-
-        .sidebar-collapsed .content {
-            margin-left: 0;
+            transition: margin-left .3s ease;
         }
 
         /* ================= TOGGLE BUTTON ================= */
@@ -79,9 +71,9 @@
             background: var(--hijau-utama);
             border: none;
             color: white;
-            width: 26px;
-            height: 60px;
-            border-radius: 0 8px 8px 0;
+            width: 28px;
+            height: 70px;
+            border-radius: 0 10px 10px 0;
             cursor: pointer;
             z-index: 1100;
             transition: all .3s ease;
@@ -91,12 +83,41 @@
             font-size: 18px;
         }
 
+        /* ================= COLLAPSED ================= */
+        .sidebar-collapsed .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-collapsed .content {
+            margin-left: 0;
+        }
+
         .sidebar-collapsed .sidebar-toggle {
             left: 0;
         }
 
         .sidebar-collapsed .sidebar-toggle i {
             transform: rotate(180deg);
+        }
+
+        /* ================= MOBILE ================= */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .content {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .sidebar-toggle {
+                left: 0;
+            }
+
+            body:not(.sidebar-collapsed) .sidebar {
+                transform: translateX(0);
+            }
         }
 
         /* ================= LOGOUT ================= */
@@ -116,13 +137,11 @@
         }
     </style>
 
-    {{-- ⬇️ PENTING: CSS DARI HALAMAN ANAK --}}
     @stack('styles')
-
 </head>
 <body>
 
-{{-- TOGGLE BUTTON --}}
+{{-- TOGGLE --}}
 <button id="toggleSidebar" class="sidebar-toggle">
     <i class="bi bi-chevron-left"></i>
 </button>
@@ -134,38 +153,31 @@
             ADMIN<br>PERPUSTAKAAN
         </h4>
 
-        <a href="{{ route('admin.dashboard') }}"
-           class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
 
-        <a href="{{ route('admin.books.index') }}"
-           class="{{ request()->routeIs('admin.books.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.books.index') }}" class="{{ request()->routeIs('admin.books.*') ? 'active' : '' }}">
             <i class="bi bi-book"></i> Kelola Buku
         </a>
 
-        <a href="{{ route('admin.members.index') }}"
-           class="{{ request()->routeIs('admin.members.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.members.index') }}" class="{{ request()->routeIs('admin.members.*') ? 'active' : '' }}">
             <i class="bi bi-people"></i> Kelola Member
         </a>
 
-        <a href="{{ route('admin.transactions.index') }}"
-           class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
             <i class="bi bi-arrow-left-right"></i> Transaksi
         </a>
 
-        <a href="{{ route('admin.reports.index') }}"
-           class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.reports.index') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
             <i class="bi bi-file-earmark-text"></i> Laporan
         </a>
 
-        <a href="{{ route('admin.fpgrowth.parameter') }}"
-           class="{{ request()->routeIs('admin.fpgrowth.parameter') ? 'active' : '' }}">
+        <a href="{{ route('admin.fpgrowth.parameter') }}" class="{{ request()->routeIs('admin.fpgrowth.parameter') ? 'active' : '' }}">
             <i class="bi bi-sliders"></i> Parameter Rekomendasi
         </a>
 
-        <a href="{{ route('admin.fpgrowth.index') }}"
-           class="{{ request()->routeIs('admin.fpgrowth.index') ? 'active' : '' }}">
+        <a href="{{ route('admin.fpgrowth.index') }}" class="{{ request()->routeIs('admin.fpgrowth.index') ? 'active' : '' }}">
             <i class="bi bi-stars"></i> Rekomendasi Buku
         </a>
     </div>
@@ -181,7 +193,6 @@
     @yield('content')
 </div>
 
-{{-- SCRIPT --}}
 <script>
     const toggleBtn = document.getElementById('toggleSidebar');
 
