@@ -60,21 +60,27 @@
             📊 Hasil Rekomendasi Buku (FP-Growth)
         </h4>
         <p class="text-muted mb-1">
-            Hasil asosiasi berdasarkan seluruh transaksi peminjaman.
+            Rekomendasi dihasilkan berdasarkan pola peminjaman buku secara bersamaan.
         </p>
         <p class="mb-0">
-            Nilai <strong>min support</strong>: {{ $minSupport }}%
+            Nilai <strong>Minimum Support</strong>: {{ $minSupport }}%
         </p>
     </div>
 
-    {{-- GRAFIK --}}
+    {{-- GRAFIK TOP BUKU FP-GROWTH --}}
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h5 class="fw-bold mb-3">
-                📚 Grafik Top 5 Buku Paling Populer
+                📚 Grafik Buku yang Sering Dipinjam Bersamaan (FP-Growth)
             </h5>
 
-            <canvas id="topBooksChart" height="100"></canvas>
+            @if(empty($topBooks))
+                <div class="text-center text-muted py-4">
+                    Data grafik belum tersedia.
+                </div>
+            @else
+                <canvas id="topBooksChart" height="110"></canvas>
+            @endif
         </div>
     </div>
 
@@ -84,7 +90,7 @@
 
             @if(empty($rules))
                 <div class="text-center text-muted py-4">
-                    Belum ada rekomendasi buku.
+                    Belum ditemukan aturan asosiasi buku.
                 </div>
             @else
                 <table class="table perpus-table text-center mb-0">
@@ -93,8 +99,8 @@
                             <th width="50">No</th>
                             <th class="text-start">Jika Meminjam</th>
                             <th class="text-start">Maka Juga Meminjam</th>
-                            <th width="120">Support</th>
-                            <th width="140">Confidence</th>
+                            <th width="120">Support (%)</th>
+                            <th width="140">Confidence (%)</th>
                         </tr>
                     </thead>
 
@@ -130,20 +136,22 @@
     </div>
 
 </div>
+@endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+@if(!empty($topBooks))
 <script>
     const ctx = document.getElementById('topBooksChart');
 
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode($topBooks->pluck('title')) !!},
+            labels: {!! json_encode(array_column($topBooks, 'title')) !!},
             datasets: [{
-                label: 'Jumlah Peminjaman',
-                data: {!! json_encode($topBooks->pluck('total')) !!},
+                label: 'Frekuensi Kemunculan',
+                data: {!! json_encode(array_column($topBooks, 'count')) !!},
                 borderWidth: 1
             }]
         },
@@ -161,6 +169,5 @@
         }
     });
 </script>
+@endif
 @endpush
-
-@endsection
