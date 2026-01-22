@@ -11,28 +11,26 @@ use App\Models\Transaction;
 class FpGrowthController extends Controller
 {
         public function index(FpGrowthService $fpGrowth)
-{
-    $setting = FpGrowthSetting::first();
-    $minSupport = $setting->min_support ?? 30;
+        {
+            $setting = FpGrowthSetting::first();
+            $minSupport = $setting->min_support ?? 30;
 
-    // FP-Growth rules (TETAP)
-    $rules = $fpGrowth->generateWithConfidence($minSupport);
+            // 🔥 Ambil HASIL FP-Growth
+            $result = $fpGrowth->generateWithConfidence($minSupport);
 
-    // TOP BUKU POPULER
-    $topBooks = Transaction::where('status', 'selesai')
-        ->join('books', 'transactions.book_id', '=', 'books.id')
-        ->selectRaw('books.title, COUNT(*) as total')
-        ->groupBy('books.title')
-        ->orderByDesc('total')
-        ->limit(5)
-        ->get();
+            // Association Rules
+            $rules = $result['rules'];
 
-    return view('admin.fpgrowth.index', compact(
-        'rules',
-        'minSupport',
-        'topBooks'
-    ));
-}
+            // Top Buku Populer versi FP-Growth
+            $topBooks = $result['frequentBooks'];
+
+            return view('admin.fpgrowth.index', compact(
+                'rules',
+                'minSupport',
+                'topBooks'
+            ));
+        }
+
 
     public function parameter()
     {
