@@ -8,8 +8,11 @@ use App\Models\Book;
 class FpGrowthService
 {
     /**
-     * Generate association rules berdasarkan support & confidence
-     * minSupportPercent dalam bentuk persen (misal 30)
+     * Generate FP-Growth Association Rules
+     * + Top Buku Populer (berdasarkan frequent itemset)
+     *
+     * @param int $minSupportPercent
+     * @return array
      */
     public function generateWithConfidence(int $minSupportPercent = 30): array
     {
@@ -19,12 +22,16 @@ class FpGrowthService
             ->get();
 
         if ($transactions->isEmpty()) {
-            return [];
+            return [
+                'rules' => [],
+                'frequentBooks' => []
+            ];
         }
 
-        // 2️⃣ Kelompokkan transaksi (user + tanggal)
+        // 2️⃣ Kelompokkan transaksi
+        // Satu basket = satu user dalam satu bulan
         $grouped = $transactions->groupBy(fn ($t) =>
-            $t->user_id . '-' . $t->borrow_date
+            $t->user_id . '-' . date('Y-m', strtotime($t->borrow_date))
         );
 
         // 3️⃣ Bentuk basket transaksi
@@ -37,12 +44,15 @@ class FpGrowthService
         }
 
         if (empty($baskets)) {
-            return [];
+            return [
+                'rules' => [],
+                'frequentBooks' => []
+            ];
         }
 
         $totalTransactions = count($baskets);
 
-        // 4️⃣ Hitung support item tunggal
+        // 4️⃣ Hitung frekuensi item tunggal
         $itemCount = [];
         foreach ($baskets as $basket) {
             foreach ($basket as $bookId) {
@@ -50,7 +60,10 @@ class FpGrowthService
             }
         }
 
-        // 5️⃣ Filter item frequent (support item ≥ minsup)
+        // Ambil judul buku sekali saja (optimasi)
+        $bookTitles = Book::pluck('title', 'id');
+
+        // 5️⃣ Filter item frequent berdasarkan min support
         $frequentItems = [];
         foreach ($itemCount as $bookId => $count) {
             $support = ($count / $totalTransactions) * 100;
@@ -60,17 +73,20 @@ class FpGrowthService
         }
 
         if (count($frequentItems) < 2) {
-            return [];
+            return [
+                'rules' => [],
+                'frequentBooks' => []
+            ];
         }
 
-        // 6️⃣ Bentuk association rules A → B
+        // 6️⃣ Bentuk association rules
         $rules = [];
 
         foreach ($frequentItems as $a => $countA) {
             foreach ($frequentItems as $b => $countB) {
                 if ($a === $b) continue;
 
-                // Hitung support A ∪ B
+                // Hitung A ∪ B
                 $countAB = 0;
                 foreach ($baskets as $basket) {
                     if (in_array($a, $basket) && in_array($b, $basket)) {
@@ -82,7 +98,7 @@ class FpGrowthService
 
                 $supportAB = ($countAB / $totalTransactions) * 100;
 
-                // 🔴 FILTER PENTING: support itemset
+                // Filter support itemset
                 if ($supportAB < $minSupportPercent) {
                     continue;
                 }
@@ -91,61 +107,54 @@ class FpGrowthService
                 $confidence = ($countAB / $countA) * 100;
 
                 $rules[] = [
-                    'from'       => Book::find($a)?->title,
-                    'to'         => Book::find($b)?->title,
+                    'from'       => $bookTitles[$a] ?? '-',
+                    'to'         => $bookTitles[$b] ?? '-',
                     'support'    => round($supportAB, 2),
                     'confidence' => round($confidence, 2),
                 ];
             }
         }
 
-        // 7️⃣ Urutkan berdasarkan confidence tertinggi
+        // 7️⃣ Urutkan rules berdasarkan confidence
         usort($rules, fn ($a, $b) =>
             $b['confidence'] <=> $a['confidence']
         );
 
-        return $rules;
+        // 8️⃣ Top buku populer (frequent itemset)
+        $frequentBooks = collect($frequentItems)
+            ->sortDesc()
+            ->take(5)
+            ->map(fn ($count, $id) => [
+                'title' => $bookTitles[$id] ?? '-',
+                'count' => $count
+            ])
+            ->values()
+            ->toArray();
+
+        return [
+            'rules' => $rules,
+            'frequentBooks' => $frequentBooks
+        ];
     }
 
     /**
-     * Rekomendasi personal untuk member
-     * minConfidence default 60%
-     */
-    public function getRecommendationsForMember(int $userId, int $minConfidence = 60): array
-    {
-        // Buku yang pernah dipinjam member
-        $borrowedBooks = Transaction::where('user_id', $userId)
-            ->where('status', 'selesai')
-            ->pluck('book_id')
-            ->unique()
-            ->toArray();
+ * Rekomendasi buku global untuk member
+ */
+public function getGlobalRecommendations(
+    int $minSupport = 30,
+    int $minConfidence = 60,
+    int $limit = 5
+): array {
+    $result = $this->generateWithConfidence($minSupport);
 
-        if (empty($borrowedBooks)) {
-            return [];
-        }
+    $rules = collect($result['rules'])
+        ->filter(fn ($r) => $r['confidence'] >= $minConfidence)
+        ->sortByDesc('confidence')
+        ->take($limit)
+        ->values()
+        ->toArray();
 
-        // Gunakan support kecil agar rekomendasi lebih fleksibel
-        $rules = $this->generateWithConfidence(1);
+    return $rules;
+}
 
-        $recommended = [];
-
-        foreach ($rules as $rule) {
-            $fromId = Book::where('title', $rule['from'])->value('id');
-
-            if (
-                in_array($fromId, $borrowedBooks) &&
-                $rule['confidence'] >= $minConfidence
-            ) {
-                $recommended[] = [
-                    'title'      => $rule['to'],
-                    'confidence' => $rule['confidence'],
-                ];
-            }
-        }
-
-        return collect($recommended)
-            ->unique('title')
-            ->values()
-            ->toArray();
-    }
 }
